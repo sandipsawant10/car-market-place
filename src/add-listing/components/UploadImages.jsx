@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { IoMdCloseCircle } from "react-icons/io";
 import { Button } from "@/components/ui/button";
 import { storage } from "@/config/firebaseConfig";
 import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
+import { carImages } from "@/config/schema";
+import { db } from "@/config/index";
 
-function UploadImages() {
+function UploadImages({triggerUploadImages, setLoader}) {
   const [selectedFileList, setSelectedFileList] = useState([]);
+
+  useEffect(() => {
+    if(triggerUploadImages) {
+      UploadImageToServer();
+    }
+  },[triggerUploadImages])
 
   const onFileSelected = (event) => {
     const files = event.target.files;
@@ -21,7 +29,8 @@ function UploadImages() {
     setSelectedFileList(result);
   };
 
-  const UploadImages = () => {
+  const UploadImageToServer = () => {
+    setLoader(true);
     selectedFileList.forEach((file) => {
       const fileName = Date.now() + ".jpg";
       const storageRef = ref(storage, `images/${fileName}`);
@@ -35,8 +44,13 @@ function UploadImages() {
         .then(() => {
           getDownloadURL(storageRef).then(async (downloadUrl) => {
             console.log(downloadUrl);
+            await db.insert(carImages).values({
+              imageUrl: downloadUrl,
+              CarListingId: triggerUploadImages
+            })
           });
         });
+        setLoader(false);
     });
 
     return (
@@ -68,12 +82,12 @@ function UploadImages() {
             onChange={onFileSelected}
           />
         </div>
-        <Button onClick={UploadImages}>Upload</Button>
+        {/* <Button onClick={UploadImageToServer}>Upload</Button> */}
       </div>
     );
   };
 
-  return UploadImages();
+  return UploadImageToServer();
 }
 
 export default UploadImages;

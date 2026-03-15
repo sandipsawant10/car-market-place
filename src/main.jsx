@@ -7,6 +7,7 @@ import Contact from "./Contact.jsx";
 import { ClerkProvider } from "@clerk/react";
 import Profile from "./profile/Index";
 import AddListing from "./add-listing/Index";
+import { Toaster } from "@/components/ui/sonner"
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ClerkProvider>
       <RouterProvider router={router} />
+      <Toaster />
     </ClerkProvider>
   </StrictMode>,
 );

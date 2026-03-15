@@ -1,24 +1,32 @@
-import Header from '@/components/Header'
-import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Link } from 'react-router-dom'
+import Header from "@/components/Header";
+import React from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MyListing from "./components/MyListing";
 
 function Profile() {
   return (
     <div>
       <Header />
-      <div className='px-10 md:px-20 my-10'>
-        <div className='flex justify-between items-center'>
-          <h2 className='font-bold text-4xl'>
-            My Listing
-          </h2>
-          <Link to='/add-listing'>
-            <Button>Add Listing</Button>
-          </Link>
-        </div>
+      <div className="px-10 md:px-20 my-10">
+        <Tabs defaultValue="my-listing" className="w-full">
+          <TabsList className='w-full flex justify-start'>
+            <TabsTrigger value="my-listing">My Listing</TabsTrigger>
+            <TabsTrigger value="inbox">Inbox</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+          </TabsList>
+          <TabsContent value="my-listing">
+            <MyListing />
+          </TabsContent>
+          <TabsContent value="inbox">
+            Inbox is coming soon...
+          </TabsContent>
+          <TabsContent value="profile">
+            Profile details is coming soon...
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
-  )
+  );
 }
 
-export default Profile
+export default Profile;

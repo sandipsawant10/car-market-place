@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {  useState } from "react";
 import Header from "@/components/Header";
 import CarDetails from "@/shared/CarDetail.json";
 import InputField from "./components/InputField";
@@ -12,10 +12,19 @@ import { CarListing } from "@/config/schema";
 import { db } from "@/config/index";
 import IconField from "./components/IconField";
 import UploadImages from "./components/UploadImages";
+import { BiLoaderAlt } from "react-icons/bi";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/react";
+import moment from "moment";
 
 function AddListing() {
   const [formData, setFormData] = useState([]);
   const [featuresData, setFeaturesData] = useState([]);
+  const [triggerUploadImages, setTriggerUploadImages] = useState();
+  const [loader, setLoader] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useUser();
 
   // used to save form data
   const handleInputChange = (name, value) => {
@@ -34,22 +43,31 @@ function AddListing() {
   };
 
   const onSubmit = async (e) => {
+    setLoader(true);
     e.preventDefault();
+    toast("Please Wait...");
 
     try {
-      const result = await db.insert(CarListing).values({
-        ...formData,
-        features: featuresData,
-      });
+      const result = await db
+        .insert(CarListing)
+        .values({
+          ...formData,
+          features: featuresData,
+          createBy: user?.primaryEmailAddress?.emailAddress,
+          postedOn: moment().format("DD/MM/YYYY"),
+        })
+        .returning({ id: CarListing.id });
       if (result) {
         console.log("Data inserted successfully");
+        setTriggerUploadImages(result[0]?.id);
+        setLoader(false);
       }
     } catch (error) {
       console.error("Error inserting data:", error);
+      toast("Error occurred while submitting the form.");
+      setLoader(false);
     }
   };
-
-  
 
   return (
     <div>
@@ -110,15 +128,27 @@ function AddListing() {
 
           {/* Car Images */}
           <Separator className="my-6" />
-          {/* <UploadImages /> */}
+          <UploadImages
+            triggerUploadImages={triggerUploadImages}
+            setLoader={(v) => {
+              setLoader(v);
+              navigate("/profile");
+            }}
+          />
           <div className="mt-10 flex justify-end">
-            <Button type="submit" onClick={(e) => onSubmit(e)}>
-              Save
+            <Button
+              disabled={loader}
+              type="submit"
+              onClick={(e) => onSubmit(e)}
+            >
+              {!loader ? (
+                "Submit"
+              ) : (
+                <BiLoaderAlt className="animate-spin text-lg" />
+              )}
             </Button>
           </div>
         </form>
-          <UploadImages />
-
       </div>
     </div>
   );
