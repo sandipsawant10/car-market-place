@@ -1,4 +1,4 @@
-import React, {  useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import CarDetails from "@/shared/CarDetail.json";
 import InputField from "./components/InputField";
@@ -14,17 +14,44 @@ import IconField from "./components/IconField";
 import UploadImages from "./components/UploadImages";
 import { BiLoaderAlt } from "react-icons/bi";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@clerk/react";
 import moment from "moment";
+import { Car } from "lucide-react";
+import { eq } from "drizzle-orm";
+import Service from "@/shared/Service";
 
 function AddListing() {
   const [formData, setFormData] = useState([]);
   const [featuresData, setFeaturesData] = useState([]);
   const [triggerUploadImages, setTriggerUploadImages] = useState();
   const [loader, setLoader] = useState(false);
+  const [carInfo, setCarInfo] = useState();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useUser();
+
+  const mode = searchParams.get("mode");
+  const recordId = searchParams.get("id");
+
+  useEffect(() => {
+    if (mode === "edit") {
+      getListingDetails();
+    }
+  }, []);
+
+  const getListingDetails = async () => {
+    const result = await db
+      .select()
+      .from(CarListing)
+      .innerJoin(Car, eq(CarListing.id, Car.CarListingId))
+      .where(eq(CarListing.id, recordId));
+
+    const res = Service.FormatResult(result);
+    setCarInfo(res[0]);
+    setFormData(res[0]);
+    setFeaturesData(res[0]?.features);
+  };
 
   // used to save form data
   const handleInputChange = (name, value) => {
@@ -47,27 +74,48 @@ function AddListing() {
     e.preventDefault();
     toast("Please Wait...");
 
-    try {
+    if (mode === "edit") {
       const result = await db
-        .insert(CarListing)
-        .values({
+        .update(CarListing)
+        .set({
           ...formData,
           features: featuresData,
           createBy: user?.primaryEmailAddress?.emailAddress,
+          userName: user?.fullName,
+          userImageUrl: user?.imageUrl,
           postedOn: moment().format("DD/MM/YYYY"),
         })
-        .returning({ id: CarListing.id });
-      if (result) {
-        console.log("Data inserted successfully");
-        setTriggerUploadImages(result[0]?.id);
+        .returning({ id: CarListing.id })
+        .where(eq(CarListing.id, recordId));
+        navigate("/profile");
+        setLoader(false);
+    } else {
+      try {
+        const result = await db
+          .insert(CarListing)
+          .values({
+            ...formData,
+            features: featuresData,
+            createBy: user?.primaryEmailAddress?.emailAddress,
+            userName: user?.fullName,
+            userImageUrl: user?.imageUrl,
+            postedOn: moment().format("DD/MM/YYYY"),
+          })
+          .returning({ id: CarListing.id });
+        if (result) {
+          console.log("Data inserted successfully");
+          setTriggerUploadImages(result[0]?.id);
+          setLoader(false);
+        }
+      } catch (error) {
+        console.error("Error inserting data:", error);
+        toast("Error occurred while submitting the form.");
         setLoader(false);
       }
-    } catch (error) {
-      console.error("Error inserting data:", error);
-      toast("Error occurred while submitting the form.");
-      setLoader(false);
     }
   };
+
+  
 
   return (
     <div>
@@ -90,16 +138,19 @@ function AddListing() {
                     <InputField
                       item={item}
                       handleInputChange={handleInputChange}
+                      carInfo={carInfo}
                     />
                   ) : item.fieldType === "dropdown" ? (
                     <DropdownField
                       item={item}
                       handleInputChange={handleInputChange}
+                      carInfo={carInfo}
                     />
                   ) : item.fieldType === "textarea" ? (
                     <TextAreaField
                       item={item}
                       handleInputChange={handleInputChange}
+                      carInfo={carInfo}
                     />
                   ) : null}
                 </div>
@@ -119,6 +170,7 @@ function AddListing() {
                     onCheckedChange={(value) =>
                       handleFeaturesChange(item.name, value)
                     }
+                    checked={featuresData?.[item.name]}
                   />{" "}
                   <h2>{item.label}</h2>
                 </div>
@@ -130,6 +182,8 @@ function AddListing() {
           <Separator className="my-6" />
           <UploadImages
             triggerUploadImages={triggerUploadImages}
+            carInfo={carInfo}
+            mode={mode}
             setLoader={(v) => {
               setLoader(v);
               navigate("/profile");

@@ -30,6 +30,12 @@ function MyListing() {
     setCarList(res);
   };
 
+  const deleteListing = async (id) => {
+    await db.delete(carImages).where(eq(carImages.CarListingId, id));
+    await db.delete(CarListing).where(eq(CarListing.id, id));
+    getUserCarListing(); // Refresh the listing after deletion
+  };
+
   return (
     <div className="mt-6">
       <div className="flex justify-between items-center">
@@ -44,8 +50,19 @@ function MyListing() {
           <div key={index}>
             <CarItem car={car} />
             <div className="p-2 bg-gray-50 rounded-lg flex justify-between gap-3">
-              <Button variant="outline" className='w-full ' >Edit</Button>
-              <Button variant="destructive"  >
+              <Link
+                to={"/add-listing?mode=edit&id=" + car?.id}
+                className="w-full"
+              >
+                <Button variant="outline" className="w-full ">
+                  Edit
+                </Button>
+              </Link>
+
+              <Button
+                variant="destructive"
+                onClick={() => deleteListing(car?.id)}
+              >
                 <FaRegTrashCan />
               </Button>
             </div>

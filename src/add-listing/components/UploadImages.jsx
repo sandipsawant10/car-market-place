@@ -5,15 +5,26 @@ import { storage } from "@/config/firebaseConfig";
 import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 import { carImages } from "@/config/schema";
 import { db } from "@/config/index";
+import { eq } from "drizzle-orm";
 
-function UploadImages({triggerUploadImages, setLoader}) {
+function UploadImages({ triggerUploadImages, setLoader, carInfo, mode }) {
   const [selectedFileList, setSelectedFileList] = useState([]);
+  const [editCarImageList, setEditCarImageList] = useState();
 
   useEffect(() => {
-    if(triggerUploadImages) {
+    if (mode === "edit") {
+      setEditCarImageList([]);
+      carInfo?.images.forEach((image) => {
+        setEditCarImageList((prev) => [...prev, image?.imageUrl]);
+      });
+    }
+  }, [carInfo]);
+
+  useEffect(() => {
+    if (triggerUploadImages) {
       UploadImageToServer();
     }
-  },[triggerUploadImages])
+  }, [triggerUploadImages]);
 
   const onFileSelected = (event) => {
     const files = event.target.files;
@@ -27,6 +38,13 @@ function UploadImages({triggerUploadImages, setLoader}) {
   const onImageRemove = (image) => {
     const result = selectedFileList.filter((item) => item !== image);
     setSelectedFileList(result);
+  };
+
+  const onImageRemoveFromDB = async (image, index) => {
+    const result = await db.delete(carImages).where(eq(carImages.id, index)).returning({ id: carImages.id });
+
+    const imageList = editCarImageList.filter((item) => item !== image);
+    setEditCarImageList(imageList);
   };
 
   const UploadImageToServer = () => {
@@ -46,17 +64,31 @@ function UploadImages({triggerUploadImages, setLoader}) {
             console.log(downloadUrl);
             await db.insert(carImages).values({
               imageUrl: downloadUrl,
-              CarListingId: triggerUploadImages
-            })
+              CarListingId: triggerUploadImages,
+            });
           });
         });
-        setLoader(false);
+      setLoader(false);
     });
 
     return (
       <div>
         <h2 className="font-medium text-xl my-10">Upload Car Images</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+          {mode === "edit" &&
+            editCarImageList?.map((image, index) => (
+              <div key={index}>
+                <IoMdCloseCircle
+                  className="absolute m-2 text-lg text-white"
+                  onClick={() => onImageRemoveFromDB(image, index)}
+                />
+                <img
+                  src={image}
+                  className="w-full h-32.5 object-cover rounded-xl"
+                />
+              </div>
+            ))}
+
           {selectedFileList.map((image, index) => (
             <div key={index}>
               <IoMdCloseCircle
@@ -69,6 +101,7 @@ function UploadImages({triggerUploadImages, setLoader}) {
               />
             </div>
           ))}
+
           <label htmlFor="upload-images">
             <div className="border rounded-xl border-dotted border-primary bg-blue-100 p-4 cursor-pointer hover:shadow-md">
               <h2 className="text-lg text-center text-primary">+</h2>
