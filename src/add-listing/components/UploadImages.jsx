@@ -41,7 +41,7 @@ function UploadImages({ triggerUploadImages, setLoader, carInfo, mode }) {
   };
 
   const onImageRemoveFromDB = async (image, index) => {
-    const result = await db.delete(carImages).where(eq(carImages.id, index)).returning({ id: carImages.id });
+    const result = await db.delete(carImages).where(eq(carImages.id, carInfo?.images[index].id)).returning({ id: carImages.id });
 
     const imageList = editCarImageList.filter((item) => item !== image);
     setEditCarImageList(imageList);

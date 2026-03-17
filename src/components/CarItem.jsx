@@ -3,10 +3,12 @@ import { LuFuel } from "react-icons/lu";
 import { SiSpeedtest } from "react-icons/si";
 import { GiGearStickPattern } from "react-icons/gi";
 import { IoOpenOutline } from "react-icons/io5";
+import { Link } from "react-router-dom";
 
 
 function CarItem({ car }) {
   return (
+    <Link to={`/listing-details/${car?.id}`}>
     <div className="rounded-xl bg-white hover:shadow-md cursor-pointer ">
       <h2 className='absolute m-2 bg-green-500 px-2 rounded-full text-sm pb-1 text-white'>New</h2>
       <img
@@ -45,6 +47,7 @@ function CarItem({ car }) {
         </div>
       </div>
     </div>
+    </Link>
   );
 }
 
