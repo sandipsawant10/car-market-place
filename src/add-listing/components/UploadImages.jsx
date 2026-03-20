@@ -1,30 +1,59 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { IoMdCloseCircle } from "react-icons/io";
-import { Button } from "@/components/ui/button";
-import { storage } from "@/config/firebaseConfig";
-import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
+import cloudinaryConfig from "@/config/cloudinaryConfig";
 import { carImages } from "@/config/schema";
 import { db } from "@/config/index";
 import { eq } from "drizzle-orm";
 
 function UploadImages({ triggerUploadImages, setLoader, carInfo, mode }) {
   const [selectedFileList, setSelectedFileList] = useState([]);
-  const [editCarImageList, setEditCarImageList] = useState();
+  const [removedDbImageIds, setRemovedDbImageIds] = useState([]);
 
-  useEffect(() => {
-    if (mode === "edit") {
-      setEditCarImageList([]);
-      carInfo?.images.forEach((image) => {
-        setEditCarImageList((prev) => [...prev, image?.imageUrl]);
-      });
-    }
-  }, [carInfo]);
+  const editCarImageList =
+    mode === "edit"
+      ? (carInfo?.images || [])
+          .filter((image) => !removedDbImageIds.includes(image?.id))
+          .map((image) => image?.imageUrl)
+      : [];
+
+  const uploadImageToServer = useCallback(() => {
+    setLoader(true);
+    selectedFileList.forEach(async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", cloudinaryConfig.uploadPreset);
+
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
+
+        const data = await response.json();
+
+        if (data.secure_url) {
+          console.log("Image uploaded to Cloudinary:", data.secure_url);
+          await db.insert(carImages).values({
+            imageUrl: data.secure_url,
+            CarListingId: triggerUploadImages,
+          });
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      } finally {
+        setLoader(false);
+      }
+    });
+  }, [selectedFileList, setLoader, triggerUploadImages]);
 
   useEffect(() => {
     if (triggerUploadImages) {
-      UploadImageToServer();
+      uploadImageToServer();
     }
-  }, [triggerUploadImages]);
+  }, [triggerUploadImages, uploadImageToServer]);
 
   const onFileSelected = (event) => {
     const files = event.target.files;
@@ -40,87 +69,65 @@ function UploadImages({ triggerUploadImages, setLoader, carInfo, mode }) {
     setSelectedFileList(result);
   };
 
-  const onImageRemoveFromDB = async (image, index) => {
-    const result = await db.delete(carImages).where(eq(carImages.id, carInfo?.images[index].id)).returning({ id: carImages.id });
+  const onImageRemoveFromDB = async (_image, index) => {
+    const imageId = carInfo?.images[index]?.id;
+    if (!imageId) return;
 
-    const imageList = editCarImageList.filter((item) => item !== image);
-    setEditCarImageList(imageList);
+    await db
+      .delete(carImages)
+      .where(eq(carImages.id, imageId))
+      .returning({ id: carImages.id });
+
+    setRemovedDbImageIds((prev) => [...prev, imageId]);
   };
 
-  const UploadImageToServer = () => {
-    setLoader(true);
-    selectedFileList.forEach((file) => {
-      const fileName = Date.now() + ".jpg";
-      const storageRef = ref(storage, `images/${fileName}`);
-      const metaData = {
-        contentType: "image/jpg",
-      };
-      uploadBytes(storageRef, file, metaData)
-        .then(() => {
-          console.log("Uploaded File");
-        })
-        .then(() => {
-          getDownloadURL(storageRef).then(async (downloadUrl) => {
-            console.log(downloadUrl);
-            await db.insert(carImages).values({
-              imageUrl: downloadUrl,
-              CarListingId: triggerUploadImages,
-            });
-          });
-        });
-      setLoader(false);
-    });
-
-    return (
-      <div>
-        <h2 className="font-medium text-xl my-10">Upload Car Images</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
-          {mode === "edit" &&
-            editCarImageList?.map((image, index) => (
-              <div key={index}>
-                <IoMdCloseCircle
-                  className="absolute m-2 text-lg text-white"
-                  onClick={() => onImageRemoveFromDB(image, index)}
-                />
-                <img
-                  src={image}
-                  className="w-full h-32.5 object-cover rounded-xl"
-                />
-              </div>
-            ))}
-
-          {selectedFileList.map((image, index) => (
+  return (
+    <div>
+      <h2 className="font-medium text-xl my-10">Upload Car Images</h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+        {mode === "edit" &&
+          editCarImageList?.map((image, index) => (
             <div key={index}>
               <IoMdCloseCircle
                 className="absolute m-2 text-lg text-white"
-                onClick={() => onImageRemove(image, index)}
+                onClick={() => onImageRemoveFromDB(image, index)}
               />
               <img
-                src={URL.createObjectURL(image)}
+                src={image}
                 className="w-full h-32.5 object-cover rounded-xl"
               />
             </div>
           ))}
 
-          <label htmlFor="upload-images">
-            <div className="border rounded-xl border-dotted border-primary bg-blue-100 p-4 cursor-pointer hover:shadow-md">
-              <h2 className="text-lg text-center text-primary">+</h2>
-            </div>
-          </label>
-          <input
-            type="file"
-            multiple={true}
-            id="upload-images"
-            className="opacity-0"
-            onChange={onFileSelected}
-          />
-        </div>
-        {/* <Button onClick={UploadImageToServer}>Upload</Button> */}
-      </div>
-    );
-  };
+        {selectedFileList.map((image, index) => (
+          <div key={index}>
+            <IoMdCloseCircle
+              className="absolute m-2 text-lg text-white"
+              onClick={() => onImageRemove(image, index)}
+            />
+            <img
+              src={URL.createObjectURL(image)}
+              className="w-full h-32.5 object-cover rounded-xl"
+            />
+          </div>
+        ))}
 
-  return UploadImageToServer();
+        <label htmlFor="upload-images">
+          <div className="border rounded-xl border-dotted border-primary bg-blue-100 p-4 cursor-pointer hover:shadow-md">
+            <h2 className="text-lg text-center text-primary">+</h2>
+          </div>
+        </label>
+        <input
+          type="file"
+          multiple={true}
+          id="upload-images"
+          className="opacity-0"
+          onChange={onFileSelected}
+        />
+      </div>
+      {/* <Button onClick={uploadImageToServer}>Upload</Button> */}
+    </div>
+  );
 }
 
 export default UploadImages;

@@ -8,7 +8,7 @@ import TextAreaField from "./components/TextAreaField";
 import features from "@/shared/Features.json";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { CarListing } from "@/config/schema";
+import { CarListing, carImages } from "@/config/schema";
 import { db } from "@/config/index";
 import IconField from "./components/IconField";
 import UploadImages from "./components/UploadImages";
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@clerk/react";
 import moment from "moment";
-import { Car } from "lucide-react";
 import { eq } from "drizzle-orm";
 import Service from "@/shared/Service";
 
@@ -41,11 +40,18 @@ function AddListing() {
   }, []);
 
   const getListingDetails = async () => {
-    const result = await db
+    const listings = await db
       .select()
       .from(CarListing)
-      .innerJoin(Car, eq(CarListing.id, Car.CarListingId))
       .where(eq(CarListing.id, recordId));
+    const images = await db
+      .select()
+      .from(carImages)
+      .where(eq(carImages.CarListingId, recordId));
+    const result = listings.map((car) => ({
+      carListing: car,
+      carImages: images,
+    }));
 
     const res = Service.FormatResult(result);
     setCarInfo(res[0]);
@@ -87,8 +93,8 @@ function AddListing() {
         })
         .returning({ id: CarListing.id })
         .where(eq(CarListing.id, recordId));
-        navigate("/profile");
-        setLoader(false);
+      navigate("/profile");
+      setLoader(false);
     } else {
       try {
         const result = await db
@@ -114,8 +120,6 @@ function AddListing() {
       }
     }
   };
-
-  
 
   return (
     <div>

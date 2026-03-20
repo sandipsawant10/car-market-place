@@ -17,14 +17,20 @@ function SearchByCategory() {
   }, []);
 
   const getCarList = async () => {
-    const result = await db
+    const listings = await db
       .select()
       .from(CarListing)
-      .innerJoin(carImages, eq(CarListing.id, carImages.CarListingId))
-      .where(CarListing.category, category);
+      .where(eq(CarListing.category, category));
+    const images = await db.select().from(carImages);
+    const result = [];
+    listings.forEach((car) => {
+      const carImgs = images.filter((img) => img.CarListingId === car.id);
+      carImgs.forEach((img) => {
+        result.push({ carListing: car, carImages: img });
+      });
+    });
 
     const res = Service.FormatResult(result);
-
     setCarList(res);
   };
 
@@ -47,10 +53,12 @@ function SearchByCategory() {
                   <CarItem car={item} />
                 </div>
               ))
-            : [1, 2, 3, 4, 5, 6].map((item, index) => 
-            <div className="h-92.5 rounded-xl bg-slate-200 animate-pulse">
-
-            </div>)}
+            : [1, 2, 3, 4, 5, 6].map((item, index) => (
+                <div
+                  key={item}
+                  className="h-92.5 rounded-xl bg-slate-200 animate-pulse"
+                ></div>
+              ))}
         </div>
       </div>
     </div>

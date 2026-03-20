@@ -26,11 +26,20 @@ function ListingDetail() {
   }, []);
 
   const getCarDetails = async () => {
-    const result = await db
+    const listings = await db
       .select()
       .from(CarListing)
-      .innerJoin(carImages, eq(CarListing.id, carImages.CarListingId))
-      .where(CarListing.id, id);
+      .where(eq(CarListing.id, Number(id)));
+    const images = await db
+      .select()
+      .from(carImages)
+      .where(eq(carImages.CarListingId, Number(id)));
+    const result = [];
+    listings.forEach((car) => {
+      images.forEach((img) => {
+        result.push({ carListing: car, carImages: img });
+      });
+    });
 
     const res = Service.FormatResult(result);
     setCarDetail(res[0]);
@@ -40,44 +49,42 @@ function ListingDetail() {
     <div>
       <Header />
 
-      <div className="p-10 md:p-20" c>
+      <div className="p-10 md:p-20">
         {/* Header Details Component */}
         <DetailHeader carDetail={carDetail} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 w-full mt-10 gap-5">
           {/* Left */}
-            <div className="md:col-span-2">
-              {/* Image Gallery */}
-                <ImageGallery carDetail={carDetail} />
+          <div className="md:col-span-2">
+            {/* Image Gallery */}
+            <ImageGallery carDetail={carDetail} />
 
-              {/* Description */}
-                <Description carDetail={carDetail} />
+            {/* Description */}
+            <Description carDetail={carDetail} />
 
-              {/* Features List */}
-                <Features features={carDetail?.features} />
+            {/* Features List */}
+            <Features features={carDetail?.features} />
 
-              {/* Financial Calculator */}
-                <FinancialCalculator carDetail={carDetail} />
-
-            </div>
+            {/* Financial Calculator */}
+            <FinancialCalculator carDetail={carDetail} />
+          </div>
 
           {/* Right */}
-          <div >
-          {/* Pricing  */}
-          <Pricing carDetail={carDetail} />
+          <div>
+            {/* Pricing  */}
+            <Pricing carDetail={carDetail} />
 
-          {/* Car Specification */}
-          <Specification carDetail={carDetail} />
+            {/* Car Specification */}
+            <Specification carDetail={carDetail} />
 
-          {/* Owner Details */}
-          <OwnersDetail carDetail={carDetail} />
+            {/* Owner Details */}
+            <OwnersDetail carDetail={carDetail} />
           </div>
         </div>
-        <MostSearchedCar/>
+        <MostSearchedCar />
       </div>
 
-
-    <Footer/>
+      <Footer />
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import { UserButton, useUser } from "@clerk/react";
+import { SignInButton, UserButton, useUser } from "@clerk/react";
 import React from "react";
 import { Link } from "react-router-dom";
-import {Button} from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 function Header() {
   const { user, isSignedIn } = useUser();
@@ -11,16 +11,16 @@ function Header() {
 
       <ul className=" m-0 flex list-none items-center gap-16 p-0 md:gap-12">
         <li className="font-medium hover:scale-105 transition-all cursor-pointer hover:text-primary">
-          Search
+          <Link to="/search">Search</Link>
         </li>
         <li className="font-medium hover:scale-105 transition-all cursor-pointer hover:text-primary">
-          Home
+          <Link to="/">Home</Link>
         </li>
         <li className="font-medium hover:scale-105 transition-all cursor-pointer hover:text-primary">
-          New
+          <Link to="/search/new">New</Link>
         </li>
         <li className="font-medium hover:scale-105 transition-all cursor-pointer hover:text-primary">
-          PreOwned
+          <Link to="/search/pre-owned">PreOwned</Link>
         </li>
       </ul>
 
@@ -28,11 +28,13 @@ function Header() {
         <div className="flex items-center gap-5">
           <UserButton />
           <Link to="/profile">
-          <Button>Submit Listing</Button>
+            <Button>Submit Listing</Button>
           </Link>
         </div>
       ) : (
-        <Button>Submit Listing</Button>
+        <SignInButton mode="modal">
+          <Button>Sign In</Button>
+        </SignInButton>
       )}
     </div>
   );

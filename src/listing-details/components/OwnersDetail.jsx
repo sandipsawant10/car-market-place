@@ -5,14 +5,15 @@ import { useUser } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
 
 function OwnersDetail({ carDetail }) {
-
   const navigate = useNavigate();
 
   const { user } = useUser();
-  const userId = user.primaryEmailAddress.emailAddress.split("@")[0];
-  const ownerUserId = carDetail?.createBy.split("@")[0];
+  const userId = user?.primaryEmailAddress?.emailAddress?.split("@")[0];
+  const ownerUserId = carDetail?.createBy?.split("@")[0];
 
   const onMessageOwnerButtonClick = async () => {
+    if (!userId || !ownerUserId) return;
+
     // Create Current User ID
     try {
       await Service.CreateSendBirdUser(
@@ -41,7 +42,10 @@ function OwnersDetail({ carDetail }) {
 
     //Create Channel
     try {
-      await Service.CreateSendBirdChannel([userId, ownerUserId],carDetail?.listingTitle).then((res) => {
+      await Service.CreateSendBirdChannel(
+        [userId, ownerUserId],
+        carDetail?.listingTitle,
+      ).then((res) => {
         console.log("Channel Created in SendBird", res);
         navigate("/profile");
       });
