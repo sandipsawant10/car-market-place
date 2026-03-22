@@ -1,29 +1,37 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { SendBirdProvider } from "@sendbird/uikit-react";
 import "@sendbird/uikit-react/dist/index.css";
 import { useUser } from "@clerk/react";
 import { GroupChannelList } from "@sendbird/uikit-react/GroupChannelList";
 import { GroupChannel } from "@sendbird/uikit-react/GroupChannel";
+import { useSearchParams } from "react-router-dom";
 
 function Inbox() {
   const { user } = useUser();
+  const [searchParams] = useSearchParams();
+  const sendbirdAppId =
+    import.meta.env.VITE_SENDBIRD_APP_ID || import.meta.env.VITE_APPLICATION_ID;
 
-  const [userId, setUserId] = useState("");
-  const [channelUrl, setChannelUrl] = useState("");
+  const normalizeSendBirdUserId = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]/g, "-")
+      .slice(0, 80);
 
-  useEffect(() => {
-    if (user?.primaryEmailAddress?.emailAddress) {
-      const id = user.primaryEmailAddress.emailAddress.split("@")[0];
-      setUserId(id);
-    }
-  }, [user]);
+  const userId = normalizeSendBirdUserId(
+    user?.primaryEmailAddress?.emailAddress || "",
+  );
+  const [channelUrl, setChannelUrl] = useState(
+    searchParams.get("channelUrl") || "",
+  );
 
   return (
     <div>
       <div style={{ width: "100%", height: "500px" }}>
         {userId ? (
           <SendBirdProvider
-            appId={import.meta.env.VITE_APPLICATION_ID}
+            appId={sendbirdAppId}
             userId={userId}
             nickname={user?.fullName || userId}
             profileUrl={user?.imageUrl}

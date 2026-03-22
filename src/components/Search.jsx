@@ -17,6 +17,17 @@ function Search() {
   const [make, setMake] = useState();
   const [price, setPrice] = useState();
 
+  const buildSearchUrl = () => {
+    const params = new URLSearchParams();
+
+    if (cars) params.set("cars", cars);
+    if (make) params.set("make", make);
+    if (price) params.set("price", price);
+
+    const query = params.toString();
+    return query ? `/search?${query}` : "/search";
+  };
+
   return (
     <div className="p-2 md:p-5 bg-white rounded-md md:rounded-full flex-col md:flex md:flex-row gap-10 px-5 items-center w-[60%] ">
       <Select onValueChange={(value) => setCars(value)}>
@@ -67,7 +78,7 @@ function Search() {
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Link to={"/search?cars=" + cars + "&make=" + make + "&price=" + price}>
+      <Link to={buildSearchUrl()}>
         <CiSearch className="text-[50px] bg-primary rounded-full p-3 text-white hover:scale-105 transition-all cursor-pointer" />
       </Link>
     </div>

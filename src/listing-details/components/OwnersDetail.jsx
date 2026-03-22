@@ -3,54 +3,106 @@ import { Button } from "@/components/ui/button";
 import Service from "@/shared/Service";
 import { useUser } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 function OwnersDetail({ carDetail }) {
   const navigate = useNavigate();
 
   const { user } = useUser();
-  const userId = user?.primaryEmailAddress?.emailAddress?.split("@")[0];
-  const ownerUserId = carDetail?.createBy?.split("@")[0];
+  const userId = user?.primaryEmailAddress?.emailAddress;
+  const ownerUserId = carDetail?.createBy;
+
+  const buildFallbackProfileUrl = (name, id) => {
+    const label = encodeURIComponent(name || id || "User");
+    return `https://ui-avatars.com/api/?name=${label}&background=random`;
+  };
+
+  const ensureSendBirdUser = async (id, name, imageUrl) => {
+    const resolvedProfileUrl = imageUrl || buildFallbackProfileUrl(name, id);
+
+    try {
+      await Service.EnsureSendBirdUser(id, name, resolvedProfileUrl);
+      return true;
+    } catch (error) {
+      const errorCode = Number(error?.response?.data?.code);
+      const message = String(
+        error?.response?.data?.message || "",
+      ).toLowerCase();
+      // Existing users are fine for chat flow; continue.
+      if (
+        errorCode === 400202 ||
+        message.includes("exists") ||
+        message.includes("duplicate") ||
+        message.includes("unique constraint")
+      ) {
+        return true;
+      }
+
+      if (errorCode === 400401) {
+        toast.error("Sendbird credentials are invalid for this application.");
+      }
+      if (errorCode === 400105) {
+        toast.error("Sendbird requires a valid profile image URL.");
+      }
+
+      console.log(
+        "SendBird user error details",
+        JSON.stringify(error?.response?.data || error, null, 2),
+      );
+      return false;
+    }
+  };
 
   const onMessageOwnerButtonClick = async () => {
     if (!userId || !ownerUserId) return;
 
-    // Create Current User ID
-    try {
-      await Service.CreateSendBirdUser(
-        userId,
-        user?.fullName,
-        user?.imageUrl,
-      ).then((res) => {
-        console.log("User Created in SendBird", res);
-      });
-    } catch (error) {
-      console.log("Error creating user in SendBird", error);
+    if (userId === ownerUserId) {
+      toast.info("You cannot message your own listing.");
+      return;
     }
 
-    //Owner User ID
-    try {
-      await Service.CreateSendBirdUser(
-        ownerUserId,
-        carDetail?.userName,
-        carDetail?.userImageUrl,
-      ).then((res) => {
-        console.log("User Created in SendBird", res);
-      });
-    } catch (error) {
-      console.log("Error fetching owner user ID", error);
+    const currentUserOk = await ensureSendBirdUser(
+      userId,
+      user?.fullName,
+      user?.imageUrl,
+    );
+    if (!currentUserOk) {
+      toast.error("Failed to initialize your chat profile.");
+      return;
     }
 
-    //Create Channel
+    const ownerUserOk = await ensureSendBirdUser(
+      ownerUserId,
+      carDetail?.userName,
+      carDetail?.userImageUrl,
+    );
+    if (!ownerUserOk) {
+      toast.error("Failed to initialize owner chat profile.");
+      return;
+    }
+
     try {
-      await Service.CreateSendBirdChannel(
+      const res = await Service.CreateSendBirdChannel(
         [userId, ownerUserId],
         carDetail?.listingTitle,
-      ).then((res) => {
-        console.log("Channel Created in SendBird", res);
-        navigate("/profile");
-      });
+      );
+      console.log("Channel Created in SendBird", res?.data || res);
+      const createdChannelUrl = res?.data?.channel_url;
+      const params = new URLSearchParams({ tab: "inbox" });
+      if (createdChannelUrl) {
+        params.set("channelUrl", createdChannelUrl);
+      }
+      navigate(`/profile?${params.toString()}`);
     } catch (error) {
-      console.log("Error creating channel in SendBird", error);
+      const errorCode = Number(error?.response?.data?.code);
+      if (errorCode === 400401) {
+        toast.error("Sendbird credentials are invalid for this application.");
+      }
+      console.log(
+        "Error creating channel in SendBird",
+        JSON.stringify(error?.response?.data || error, null, 2),
+      );
+      toast.error("Unable to start chat. Please try again.");
     }
   };
 

@@ -8,7 +8,10 @@ function Specification({ carDetail }) {
       <h2 className="font-medium text-2xl">Car Specification</h2>
       {carDetail ? (
         CarSpecification.map((item, index) => (
-          <div className="mt-5 flex items-center justify-between">
+          <div
+            key={item?.name || item?.label || index}
+            className="mt-5 flex items-center justify-between"
+          >
             <h2 className="flex gap-2">
               <IconField icon={item?.icon} />
               {item?.label}
