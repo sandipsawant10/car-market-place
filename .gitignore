@@ -25,4 +25,4 @@ dist-ssr
 
 
 .env
-drizzle.config.js
+.env.local
