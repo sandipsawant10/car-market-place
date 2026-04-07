@@ -4,6 +4,12 @@ A full-stack style React application for listing, searching, and browsing cars.
 
 The app is built with Vite and React, uses Neon Postgres + Drizzle ORM for data access, Clerk for authentication, Cloudinary for image uploads, and Sendbird for chat/inbox features.
 
+## 🚀 Live Demo
+
+**[View Live Application](https://car-market-place-xi.vercel.app/)**
+
+Deployed on Vercel for production use.
+
 ## Tech Stack
 
 - Frontend: React 19, Vite 8, React Router
@@ -134,5 +140,3 @@ Important: move database credentials to environment variables for any shared or 
   - Confirm VITE_CLOUDINARY_CLOUD_NAME and unsigned VITE_CLOUDINARY_UPLOAD_PRESET.
 - Clerk warning about development keys:
   - Expected in development; use production keys before release.
-
-
